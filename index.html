@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Josephus Game Fixed</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -9,15 +10,21 @@ body, html { margin:0; padding:0; width:100%; height:100%; font-family:'Press St
 #menu, #gameUI { position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; }
 button { font-family:'Press Start 2P', cursive; font-size:18px; padding:20px 40px; margin:10px; background:#7B3F00; color:#FFF; border:none; border-radius:4px; cursor:pointer; box-shadow:4px 4px 0px #000; }
 button:hover { background:#A0522D; }
+button:disabled { background:#cccccc; cursor:not-allowed; }
 #settings { display:flex; flex-direction:column; align-items:center; margin-top:20px; }
 label { margin:5px; font-size:12px; }
+input, select { font-family:'Press Start 2P', cursive; font-size:10px; padding:5px; margin:5px; }
 canvas { border:2px solid #000; background:white; margin-top:20px; }
-#powerups { margin-top:10px; }
-.powerup { font-size:30px; cursor:pointer; margin:0 5px; }
-#result { margin-top:10px; font-size:14px; text-align:center; }
-#leaderboard { position:absolute; top:10px; right:10px; width:300px; background:white; border:2px solid #000; padding:10px; display:none; }
+#powerups { margin-top:10px; display:flex; gap:10px; }
+.powerup { font-size:30px; cursor:pointer; margin:0 5px; padding:5px; border:2px solid transparent; }
+.powerup:hover { border-color: gold; }
+.powerup.used { opacity:0.5; cursor:not-allowed; }
+#result { margin-top:10px; font-size:14px; text-align:center; min-height:40px; }
+#leaderboard { position:absolute; top:10px; right:10px; width:300px; background:white; border:2px solid #000; padding:10px; display:none; z-index:10; }
 #leaderboard h3 { margin:0 0 10px 0; text-align:center; }
-#leaderboard ul { padding-left:20px; font-size:12px; }
+#leaderboard ul { padding-left:20px; font-size:12px; list-style-type: none; }
+#leaderboard li { margin:5px 0; }
+#controls { margin-top:10px; display:flex; gap:10px; }
 </style>
 </head>
 <body>
@@ -36,7 +43,11 @@ canvas { border:2px solid #000; background:white; margin-top:20px; }
 <canvas id="gameCanvas" width="600" height="600"></canvas>
 <div id="powerups"></div>
 <div id="result"></div>
+<div id="controls">
 <button id="nextStepBtn" style="display:none;">Next Step ➡️</button>
+<button id="restartBtn">Restart Game</button>
+<button id="menuBtn">Back to Menu</button>
+</div>
 </div>
 
 <div id="leaderboard">
@@ -50,13 +61,22 @@ const menu=document.getElementById('menu'), gameUI=document.getElementById('game
 const settingsDiv=document.getElementById('settings'), canvas=document.getElementById('gameCanvas');
 const ctx=canvas.getContext('2d'), nextStepBtn=document.getElementById('nextStepBtn');
 const powerupsDiv=document.getElementById('powerups'), resultDiv=document.getElementById('result');
-const scoreList=document.getElementById('scoreList');
+const scoreList=document.getElementById('scoreList'), restartBtn=document.getElementById('restartBtn');
+const menuBtn=document.getElementById('menuBtn');
 
 let mode, n, k, playerSeat, avatar, theme='classic';
 let players=[], eliminated=[], index=0, step=0, interval=null, playerGuess=null;
-let shieldUsed=false, shieldActive=false, particles=[];
+let shieldUsed=false, shieldActive=false, particles=[], gameActive=false;
+let powerupsAvailable = [], score = 0, survivalRounds = 0;
 
 const otherAvatars=["😎","🤖","🐱","🐶","👻","👽","🦄","🐵","🦊","🦖","🦋","🎃","💀","🐸","🦁"];
+
+// Leaderboard data (in a real app, this would be stored in a database)
+let leaderboard = JSON.parse(localStorage.getItem('josephusLeaderboard')) || {
+  classic: [],
+  puzzle: [],
+  endless: []
+};
 
 function getRandomAvatar(){ return otherAvatars[Math.floor(Math.random()*otherAvatars.length)]; }
 
@@ -68,7 +88,15 @@ function showSettings(selectedMode){
   <label>Your seat: <input type="number" id="playerSeat" value="1" min="1"></label>
   <label>Your avatar: <input type="text" id="avatar" value="🙂" maxlength="2"></label>
   <label>Theme: <select id="theme"><option value="classic">Classic</option><option value="space">Space 🚀</option><option value="zombie">Zombie 🧟</option></select></label>`;
-  if(mode==='puzzle') html+=`<label>Guess safe spot: <input type="number" id="guessInput" min="1"></label><button id="submitGuessBtn">Submit Guess</button>`;
+  
+  if(mode==='puzzle') {
+    html+=`<label>Guess safe spot: <input type="number" id="guessInput" min="1"></label><button id="submitGuessBtn">Submit Guess</button>`;
+  }
+  
+  if(mode==='endless') {
+    html+=`<p style="font-size:10px; text-align:center; max-width:400px;">In Endless mode, you start with 10 players. After each round, 2 more players join. Survive as long as possible!</p>`;
+  }
+  
   html+=`<button id="startGameBtn">Start Game</button>`;
   settingsDiv.innerHTML = html;
   document.getElementById('startGameBtn').onclick = startGame;
@@ -81,29 +109,258 @@ function startGame(){
   playerSeat=parseInt(document.getElementById('playerSeat').value);
   avatar=document.getElementById('avatar').value||'🙂';
   theme=document.getElementById('theme').value;
+  
   if(playerSeat<1||playerSeat>n){alert("Your seat must be 1-"+n); return;}
-  menu.style.display='none'; gameUI.style.display='flex';
-  shieldUsed=false; shieldActive=false; particles=[];
+  
+  menu.style.display='none'; 
+  gameUI.style.display='flex';
+  shieldUsed=false; 
+  shieldActive=false; 
+  particles=[];
+  gameActive = true;
+  score = 0;
+  survivalRounds = 0;
+  
+  // Initialize powerups based on mode
+  powerupsAvailable = [];
+  if (mode !== 'puzzle') {
+    powerupsAvailable.push({type: 'shield', uses: 1, icon: '🛡️'});
+    if (mode === 'endless') {
+      powerupsAvailable.push({type: 'skip', uses: 3, icon: '⏭️'});
+    }
+  }
+  
+  updatePowerupsDisplay();
   initGame();
   nextStepBtn.style.display = (mode==='step')?'inline-block':'none';
 }
 
 function initGame(){
   players=[]; eliminated=[]; index=0; step=0;
-  for(let i=1;i<=n;i++){ players.push({seat:i,avatar:(i===playerSeat)?avatar:getRandomAvatar()}); }
+  for(let i=1;i<=n;i++){ 
+    players.push({
+      seat:i,
+      avatar:(i===playerSeat)?avatar:getRandomAvatar(),
+      alive: true
+    }); 
+  }
   drawCircle();
-  if(mode==='classic'||mode==='endless') interval=setInterval(eliminationStep,700);
+  resultDiv.innerHTML = `Game started! ${players.length} players. Step size: ${k}`;
+  
+  if(mode==='classic'||mode==='endless') {
+    interval=setInterval(eliminationStep,700);
+  }
 }
 
 function eliminationStep(){
-  if(players.length<=1){ clearInterval(interval); return; }
-  step++; if(step>=k){
+  if(!gameActive || players.length <= 1){
+    if (players.length <= 1) {
+      endGame();
+    }
+    return;
+  }
+  
+  step++; 
+  if(step>=k){
     const el=players[index];
-    if(el.seat===playerSeat && shieldActive){ shieldActive=false; index++; step=0; drawCircle(); return; }
-    eliminated.push(players[index]); particlesCreate(index); players.splice(index,1); step=0;
-  } else index++;
+    
+    // Check if player has shield active
+    if(el.seat===playerSeat && shieldActive){ 
+      shieldActive=false;
+      resultDiv.innerHTML = "Shield protected you!";
+      index++; 
+      step=0; 
+      drawCircle(); 
+      return; 
+    }
+    
+    eliminated.push({...el, eliminatedAt: Date.now()});
+    particlesCreate(index);
+    
+    // Check if player was eliminated
+    if (el.seat === playerSeat) {
+      endGame(false);
+      return;
+    }
+    
+    players.splice(index,1); 
+    step=0;
+    
+    // In endless mode, check if round is over
+    if (mode === 'endless' && players.length === 1) {
+      survivalRounds++;
+      resultDiv.innerHTML = `Round ${survivalRounds} complete! +2 players next round.`;
+      
+      // Add 2 more players for the next round
+      setTimeout(() => {
+        const newSeat = players.length + 1;
+        players.push({seat: newSeat, avatar: getRandomAvatar(), alive: true});
+        players.push({seat: newSeat + 1, avatar: getRandomAvatar(), alive: true});
+        n = players.length;
+        index = 0;
+        step = 0;
+        drawCircle();
+      }, 1500);
+    }
+  } else {
+    index++;
+  }
+  
   if(index>=players.length) index=0;
   drawCircle();
+}
+
+function usePowerup(powerupType) {
+  if (!gameActive) return;
+  
+  const powerup = powerupsAvailable.find(p => p.type === powerupType);
+  if (!powerup || powerup.uses <= 0) return;
+  
+  switch(powerupType) {
+    case 'shield':
+      if (!shieldUsed) {
+        shieldActive = true;
+        shieldUsed = true;
+        powerup.uses--;
+        resultDiv.innerHTML = "Shield activated! You'll be protected once.";
+      }
+      break;
+      
+    case 'skip':
+      if (mode === 'endless' && players.length > 1) {
+        // Skip the current elimination
+        step = 0;
+        index = (index + 1) % players.length;
+        powerup.uses--;
+        resultDiv.innerHTML = "Skipped current elimination!";
+        drawCircle();
+      }
+      break;
+  }
+  
+  updatePowerupsDisplay();
+}
+
+function updatePowerupsDisplay() {
+  powerupsDiv.innerHTML = '';
+  powerupsAvailable.forEach(powerup => {
+    const powerupEl = document.createElement('span');
+    powerupEl.className = `powerup ${powerup.uses <= 0 ? 'used' : ''}`;
+    powerupEl.innerHTML = `${powerup.icon} (${powerup.uses})`;
+    powerupEl.title = powerup.type === 'shield' ? 'Protect yourself once' : 'Skip elimination';
+    powerupEl.onclick = () => usePowerup(powerup.type);
+    powerupsDiv.appendChild(powerupEl);
+  });
+}
+
+function submitGuess() {
+  if (!gameActive) return;
+  
+  const guessInput = document.getElementById('guessInput');
+  playerGuess = parseInt(guessInput.value);
+  
+  if (isNaN(playerGuess) || playerGuess < 1 || playerGuess > n) {
+    alert("Please enter a valid seat number between 1 and " + n);
+    return;
+  }
+  
+  resultDiv.innerHTML = `You guessed seat ${playerGuess}. Let's see if you're right!`;
+  guessInput.disabled = true;
+  document.getElementById('submitGuessBtn').disabled = true;
+  
+  // Start the elimination process
+  interval = setInterval(puzzleEliminationStep, 700);
+}
+
+function puzzleEliminationStep() {
+  if (players.length <= 1) {
+    clearInterval(interval);
+    endGame();
+    return;
+  }
+  
+  step++; 
+  if(step>=k){
+    const el=players[index];
+    eliminated.push({...el, eliminatedAt: Date.now()});
+    particlesCreate(index);
+    players.splice(index,1); 
+    step=0;
+    
+    resultDiv.innerHTML = `Eliminated seat ${el.seat}. ${players.length} players left.`;
+  } else {
+    index++;
+  }
+  
+  if(index>=players.length) index=0;
+  drawCircle();
+}
+
+function endGame(isWin = null) {
+  gameActive = false;
+  clearInterval(interval);
+  
+  // Determine if player won
+  let playerWon = false;
+  if (mode === 'puzzle') {
+    playerWon = players.length === 1 && players[0].seat === playerGuess;
+  } else {
+    playerWon = players.length === 1 && players[0].seat === playerSeat;
+  }
+  
+  if (isWin !== null) playerWon = isWin;
+  
+  if (playerWon) {
+    resultDiv.innerHTML = `You won! 🎉 ${mode === 'endless' ? `Survived ${survivalRounds} rounds!` : ''}`;
+    score = mode === 'endless' ? survivalRounds : n;
+    
+    // Add to leaderboard
+    addToLeaderboard(score);
+  } else {
+    resultDiv.innerHTML = `Game over! ${players.length > 0 ? `Seat ${players[0].seat} won.` : 'No one survived.'}`;
+  }
+}
+
+function addToLeaderboard(score) {
+  const entry = {
+    score: score,
+    date: new Date().toLocaleDateString(),
+    mode: mode,
+    players: n,
+    step: k
+  };
+  
+  leaderboard[mode].push(entry);
+  // Keep only top 10 scores
+  leaderboard[mode].sort((a, b) => b.score - a.score);
+  leaderboard[mode] = leaderboard[mode].slice(0, 10);
+  
+  // Save to localStorage
+  localStorage.setItem('josephusLeaderboard', JSON.stringify(leaderboard));
+}
+
+function showLeaderboard() {
+  scoreList.innerHTML = '';
+  
+  for (const modeKey in leaderboard) {
+    const modeScores = leaderboard[modeKey];
+    if (modeScores.length > 0) {
+      const modeHeader = document.createElement('li');
+      modeHeader.innerHTML = `<strong>${modeKey.toUpperCase()}</strong>`;
+      scoreList.appendChild(modeHeader);
+      
+      modeScores.forEach((entry, index) => {
+        const li = document.createElement('li');
+        li.innerHTML = `${index+1}. Score: ${entry.score} (${entry.date}) - ${entry.players} players, k=${entry.step}`;
+        scoreList.appendChild(li);
+      });
+      
+      // Add spacing between modes
+      scoreList.appendChild(document.createElement('br'));
+    }
+  }
+  
+  document.getElementById('leaderboard').style.display = 'block';
 }
 
 function particlesCreate(playerIndex){
@@ -121,7 +378,12 @@ function drawParticles(){
   for(let i=particles.length-1;i>=0;i--){
     const p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.alpha-=0.05;
     if(p.alpha<=0) particles.splice(i,1);
-    else { ctx.fillStyle=`rgba(255,165,0,${p.alpha})`; ctx.beginPath(); ctx.arc(p.x,p.y,4,0,2*Math.PI); ctx.fill(); }
+    else { 
+      ctx.fillStyle=`rgba(255,165,0,${p.alpha})`; 
+      ctx.beginPath(); 
+      ctx.arc(p.x,p.y,4,0,2*Math.PI); 
+      ctx.fill(); 
+    }
   }
 }
 
@@ -129,18 +391,68 @@ function drawCircle(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const radius=200,cx=canvas.width/2,cy=canvas.height/2;
   const total=players.length+eliminated.length;
+  
+  // Apply theme-based styling
+  if (theme === 'space') {
+    ctx.strokeStyle = 'darkblue';
+    ctx.fillStyle = 'black';
+  } else if (theme === 'zombie') {
+    ctx.strokeStyle = 'darkgreen';
+    ctx.fillStyle = '#333';
+  } else {
+    ctx.strokeStyle = 'black';
+    ctx.fillStyle = 'white';
+  }
+  
   for(let i=0;i<total;i++){
     const angle=(2*Math.PI*i)/total-Math.PI/2;
     const x=cx+radius*Math.cos(angle),y=cy+radius*Math.sin(angle);
-    ctx.beginPath(); ctx.arc(x,y,22,0,2*Math.PI);
+    ctx.beginPath(); 
+    ctx.arc(x,y,22,0,2*Math.PI);
+    
     const playerObj=players.find(p=>p.seat===i+1);
-    ctx.fillStyle=playerObj?((playerObj.seat===playerSeat)?'lightgreen':'skyblue'):'red';
-    ctx.fill(); ctx.stroke();
-    if(playerObj) ctx.fillText(playerObj.avatar,x,y);
-    else ctx.fillText('💀',x,y);
+    const eliminatedObj=eliminated.find(p=>p.seat===i+1);
+    
+    if(playerObj) {
+      // Player is still in the game
+      ctx.fillStyle = playerObj.seat===playerSeat ? 
+        (shieldActive ? 'gold' : 'lightgreen') : 'skyblue';
+    } else if (eliminatedObj) {
+      // Player has been eliminated
+      ctx.fillStyle = eliminatedObj.seat===playerSeat ? 'red' : 'lightcoral';
+    }
+    
+    ctx.fill(); 
+    ctx.stroke();
+    
+    // Draw avatar or skull for eliminated players
+    ctx.font = '20px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    if(playerObj) {
+      ctx.fillText(playerObj.avatar, x, y);
+    } else {
+      ctx.fillText('💀', x, y);
+    }
   }
+  
   drawParticles();
-  requestAnimationFrame(drawCircle);
+  
+  // Draw game info
+  ctx.font = '14px "Press Start 2P"';
+  ctx.fillStyle = 'black';
+  ctx.textAlign = 'left';
+  ctx.fillText(`Players: ${players.length}/${n}`, 10, 30);
+  ctx.fillText(`Step: ${step+1}/${k}`, 10, 50);
+  
+  if (mode === 'endless') {
+    ctx.fillText(`Round: ${survivalRounds}`, 10, 70);
+  }
+  
+  if (gameActive) {
+    requestAnimationFrame(drawCircle);
+  }
 }
 
 // --- Button bindings ---
@@ -148,9 +460,27 @@ document.getElementById('classicBtn').onclick=()=>showSettings('classic');
 document.getElementById('stepBtn').onclick=()=>showSettings('step');
 document.getElementById('puzzleBtn').onclick=()=>showSettings('puzzle');
 document.getElementById('endlessBtn').onclick=()=>showSettings('endless');
-document.getElementById('leaderboardBtn').onclick=()=>alert('Leaderboard placeholder');
+document.getElementById('leaderboardBtn').onclick=showLeaderboard;
 nextStepBtn.onclick=eliminationStep;
 
+restartBtn.onclick = function() {
+  if (gameActive) {
+    clearInterval(interval);
+  }
+  startGame();
+};
+
+menuBtn.onclick = function() {
+  if (gameActive) {
+    clearInterval(interval);
+    gameActive = false;
+  }
+  gameUI.style.display = 'none';
+  menu.style.display = 'flex';
+};
+
+// Initialize
+drawCircle();
 </script>
 </body>
 </html>
