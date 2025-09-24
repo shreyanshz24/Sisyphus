@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Josephus Problem Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f8f9fa;
+      color: #333;
+    }
+
+    h1 {
+      margin-top: 20px;
+    }
+
+    #controls {
+      margin: 20px;
+    }
+
+    canvas {
+      border: 1px solid #ccc;
+      margin-top: 20px;
+      background: white;
+    }
+
+    #result {
+      margin-top: 20px;
+      font-weight: bold;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Josephus Problem Game 🎮</h1>
+
+  <div id="controls">
+    <label>Number of players (n): 
+      <input type="number" id="numPlayers" value="10" min="2">
+    </label>
+    <label>Step size (k): 
+      <input type="number" id="stepSize" value="3" min="2">
+    </label>
+    <label>Your seat:
+      <input type="number" id="playerSeat" value="1" min="1">
+    </label>
+    <button id="startBtn">Start Game</button>
+  </div>
+
+  <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+  <div id="result"></div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const startBtn = document.getElementById("startBtn");
+    const resultDiv = document.getElementById("result");
+
+    let players = [];
+    let eliminated = [];
+    let n, k, playerSeat;
+
+    startBtn.addEventListener("click", () => {
+      n = parseInt(document.getElementById("numPlayers").value);
+      k = parseInt(document.getElementById("stepSize").value);
+      playerSeat = parseInt(document.getElementById("playerSeat").value);
+
+      if (playerSeat < 1 || playerSeat > n) {
+        alert("Your seat must be between 1 and " + n);
+        return;
+      }
+
+      initGame();
+    });
+
+    function initGame() {
+      players = [];
+      eliminated = [];
+      resultDiv.textContent = "";
+
+      for (let i = 1; i <= n; i++) {
+        players.push(i);
+      }
+
+      drawCircle(players, eliminated);
+
+      // Animate elimination
+      let index = 0;
+      let step = 0;
+
+      const interval = setInterval(() => {
+        if (players.length === 1) {
+          clearInterval(interval);
+          let winner = players[0];
+
+          let safeSpot = josephus(n, k); // Math safe spot
+          let survived = (playerSeat === winner);
+
+          resultDiv.innerHTML = `
+            Winner is seat <b>${winner}</b><br>
+            Safe position (mathematical solution): <b>${safeSpot}</b><br>
+            You ${survived ? "survived 🎉" : "were eliminated 💀"}
+          `;
+          return;
+        }
+
+        step++;
+        if (step === k) {
+          eliminated.push(players[index]);
+          players.splice(index, 1);
+          step = 0;
+        } else {
+          index++;
+        }
+
+        if (index >= players.length) index = 0;
+
+        drawCircle(players, eliminated);
+      }, 800);
+    }
+
+    function drawCircle(players, eliminated) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const radius = 200;
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      let total = players.length + eliminated.length;
+
+      for (let i = 0; i < total; i++) {
+        const angle = (2 * Math.PI * i) / total - Math.PI / 2;
+        const x = cx + radius * Math.cos(angle);
+        const y = cy + radius * Math.sin(angle);
+
+        ctx.beginPath();
+        ctx.arc(x, y, 20, 0, 2 * Math.PI);
+
+        if (eliminated.includes(i + 1)) {
+          ctx.fillStyle = "red";
+        } else if (players.includes(i + 1)) {
+          ctx.fillStyle = (i + 1 === playerSeat) ? "lightgreen" : "lightblue";
+        } else {
+          ctx.fillStyle = "gray";
+        }
+
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "black";
+        ctx.font = "14px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(i + 1, x, y);
+      }
+    }
+
+    // Josephus problem solution (recursive formula)
+    function josephus(n, k) {
+      let res = 0;
+      for (let i = 1; i <= n; i++) {
+        res = (res + k) % i;
+      }
+      return res + 1;
+    }
+  </script>
+</body>
+</html>
