@@ -1,649 +1,211 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Josephus Problem Game</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background: #f8f9fa;
-      color: #333;
-      margin: 0;
-      padding: 0;
-    }
-
-    h1 {
-      margin-top: 20px;
-    }
-
-    #menu {
-      margin: 20px auto;
-      max-width: 600px;
-    }
-
-    #controls {
-      margin: 20px;
-    }
-
-    canvas {
-      border: 1px solid #ccc;
-      margin-top: 20px;
-      background: white;
-    }
-
-    #result {
-      margin-top: 20px;
-      font-weight: bold;
-      font-size: 18px;
-      min-height: 60px;
-    }
-
-    button {
-      padding: 10px 20px;
-      margin: 5px;
-      background: #4a6fa5;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    button:hover {
-      background: #385d8a;
-    }
-
-    button:disabled {
-      background: #cccccc;
-      cursor: not-allowed;
-    }
-
-    .mode-btn {
-      display: block;
-      width: 250px;
-      margin: 10px auto;
-      padding: 15px;
-    }
-
-    #settings {
-      margin: 20px auto;
-      max-width: 600px;
-    }
-
-    label {
-      display: block;
-      margin: 10px 0;
-    }
-
-    input, select {
-      padding: 5px;
-      margin-left: 10px;
-    }
-
-    #powerups {
-      margin: 15px 0;
-    }
-
-    .powerup {
-      font-size: 24px;
-      cursor: pointer;
-      margin: 0 10px;
-      padding: 5px;
-      border: 2px solid transparent;
-      display: inline-block;
-    }
-
-    .powerup:hover {
-      border-color: gold;
-    }
-
-    .powerup.used {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    #leaderboard {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      border: 2px solid #4a6fa5;
-      padding: 20px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.2);
-      z-index: 100;
-      display: none;
-      max-width: 500px;
-      width: 90%;
-    }
-
-    #leaderboard h2 {
-      margin-top: 0;
-    }
-
-    #leaderboard ul {
-      list-style-type: none;
-      padding: 0;
-      text-align: left;
-    }
-
-    #leaderboard li {
-      margin: 10px 0;
-      padding: 5px;
-      border-bottom: 1px solid #eee;
-    }
-
-    .overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      z-index: 99;
-      display: none;
-    }
-
-    #gameUI {
-      display: none;
-    }
-
-    #controls {
-      margin-top: 15px;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Josephus Game - Fixed (No Sounds)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+body, html { margin:0; padding:0; width:100%; height:100%; font-family:'Press Start 2P', cursive; background: linear-gradient(#87CEEB, #87CEFA); overflow:hidden; }
+#menu, #gameUI { position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+button { font-family:'Press Start 2P', cursive; font-size:18px; padding:20px 40px; margin:10px; background:#7B3F00; color:#FFF; border:none; border-radius:4px; cursor:pointer; box-shadow:4px 4px 0px #000; }
+button:hover { background:#A0522D; }
+#settings { display:flex; flex-direction:column; align-items:center; margin-top:20px; }
+label { margin:5px; font-size:12px; }
+canvas { border:2px solid #000; background:white; margin-top:20px; }
+#powerups { margin-top:10px; }
+.powerup { font-size:30px; cursor:pointer; margin:0 5px; }
+#result { margin-top:10px; font-size:14px; text-align:center; }
+#leaderboard { position:absolute; top:10px; right:10px; width:300px; background:white; border:2px solid #000; padding:10px; display:none; }
+#leaderboard h3 { margin:0 0 10px 0; text-align:center; }
+#leaderboard ul { padding-left:20px; font-size:12px; }
+</style>
 </head>
 <body>
-  <div id="menu">
-    <h1>Josephus Problem Game 🎮</h1>
-    <button class="mode-btn" id="classicBtn">Classic Mode</button>
-    <button class="mode-btn" id="stepBtn">Step-by-Step Mode</button>
-    <button class="mode-btn" id="puzzleBtn">Puzzle Mode</button>
-    <button class="mode-btn" id="endlessBtn">Endless Survival</button>
-    <button class="mode-btn" id="leaderboardBtn">Leaderboard</button>
-  </div>
 
-  <div id="gameUI">
-    <div id="settings"></div>
-    <canvas id="gameCanvas" width="600" height="600"></canvas>
-    <div id="powerups"></div>
-    <div id="result"></div>
-    <div id="controls">
-      <button id="nextStepBtn" style="display:none;">Next Step ➡️</button>
-      <button id="restartBtn">Restart Game</button>
-      <button id="menuBtn">Back to Menu</button>
-    </div>
-  </div>
+<div id="menu">
+<h1>JOSEPHUS GAME</h1>
+<button id="classicBtn">Classic Mode</button>
+<button id="stepBtn">Step-by-Step Mode</button>
+<button id="puzzleBtn">Puzzle Mode</button>
+<button id="endlessBtn">Endless Survival</button>
+<button id="leaderboardBtn">Leaderboard</button>
+</div>
 
-  <div class="overlay" id="overlay"></div>
-  <div id="leaderboard">
-    <h2>Leaderboard</h2>
-    <ul id="scoreList"></ul>
-    <button id="closeLeaderboard">Close</button>
-  </div>
+<div id="gameUI" style="display:none;">
+<div id="settings"></div>
+<canvas id="gameCanvas" width="600" height="600"></canvas>
+<div id="powerups"></div>
+<div id="result"></div>
+<button id="nextStepBtn" style="display:none;">Next Step ➡️</button>
+</div>
 
-  <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    const menu = document.getElementById("menu");
-    const gameUI = document.getElementById("gameUI");
-    const settingsDiv = document.getElementById("settings");
-    const resultDiv = document.getElementById("result");
-    const powerupsDiv = document.getElementById("powerups");
-    const nextStepBtn = document.getElementById("nextStepBtn");
-    const restartBtn = document.getElementById("restartBtn");
-    const menuBtn = document.getElementById("menuBtn");
-    const leaderboard = document.getElementById("leaderboard");
-    const overlay = document.getElementById("overlay");
-    const scoreList = document.getElementById("scoreList");
-    const closeLeaderboard = document.getElementById("closeLeaderboard");
+<div id="leaderboard">
+<h3>Leaderboard</h3>
+<ul id="scoreList"></ul>
+<button onclick="document.getElementById('leaderboard').style.display='none'">Close</button>
+</div>
 
-    let mode, n, k, playerSeat, avatar, theme = 'classic';
-    let players = [], eliminated = [], index = 0, step = 0, interval = null;
-    let playerGuess = null, gameActive = false;
-    let shieldUsed = false, shieldActive = false, particles = [];
-    let powerupsAvailable = [], score = 0, survivalRounds = 0;
+<script>
+const menu=document.getElementById('menu'), gameUI=document.getElementById('gameUI');
+const settingsDiv=document.getElementById('settings'), canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d'), nextStepBtn=document.getElementById('nextStepBtn');
+const powerupsDiv=document.getElementById('powerups'), resultDiv=document.getElementById('result');
+const scoreList=document.getElementById('scoreList');
 
-    const otherAvatars = ["😎", "🤖", "🐱", "🐶", "👻", "👽", "🦄", "🐵", "🦊", "🦖"];
+let mode, n, k, playerSeat, avatar, theme='classic';
+let players=[], eliminated=[], index=0, step=0, interval, playerGuess=null;
+let shieldUsed=false, shieldActive=false, particles=[];
+let endlessStreak=0;
+const scores=JSON.parse(localStorage.getItem('josephusScores'))||[];
+const otherAvatars=["😎","🤖","🐱","🐶","👻","👽","🦄","🐵","🦊","🦖","🦋","🎃","💀","🐸","🦁"];
 
-    // Leaderboard data
-    let leaderboardData = JSON.parse(localStorage.getItem('josephusLeaderboard')) || {
-      classic: [],
-      puzzle: [],
-      endless: []
-    };
+function updateLeaderboard(){
+  scoreList.innerHTML='';
+  scores.forEach((entry,i)=>{
+    let li=document.createElement('li');
+    li.textContent=`Game ${i+1}: ${entry.result} (Safe:${entry.safeSpot}, Guess:${entry.guess})`;
+    scoreList.appendChild(li);
+  });
+}
+updateLeaderboard();
 
-    // Event listeners for mode selection
-    document.getElementById("classicBtn").addEventListener("click", () => showSettings('classic'));
-    document.getElementById("stepBtn").addEventListener("click", () => showSettings('step'));
-    document.getElementById("puzzleBtn").addEventListener("click", () => showSettings('puzzle'));
-    document.getElementById("endlessBtn").addEventListener("click", () => showSettings('endless'));
-    document.getElementById("leaderboardBtn").addEventListener("click", showLeaderboard);
+function getRandomAvatar(){ return otherAvatars[Math.floor(Math.random()*otherAvatars.length)]; }
 
-    nextStepBtn.addEventListener("click", eliminationStep);
-    restartBtn.addEventListener("click", restartGame);
-    menuBtn.addEventListener("click", backToMenu);
-    closeLeaderboard.addEventListener("click", closeLeaderboardModal);
+function showSettings(selectedMode){
+  settingsDiv.innerHTML=''; mode=selectedMode;
+  let html=`<label>Number of players: <input type="number" id="numPlayers" value="10" min="2"></label>
+  <label>Step size (k): <input type="number" id="stepSize" value="3" min="2"></label>
+  <label>Your seat: <input type="number" id="playerSeat" value="1" min="1"></label>
+  <label>Your avatar: <input type="text" id="avatar" value="🙂" maxlength="2"></label>
+  <label>Theme: <select id="theme"><option value="classic">Classic</option><option value="space">Space 🚀</option><option value="zombie">Zombie 🧟</option></select></label>`;
+  if(selectedMode==='puzzle') html+=`<label>Guess safe spot: <input type="number" id="guessInput" min="1"></label><button id="submitGuessBtn">Submit Guess</button>`;
+  html+=`<button id="startGameBtn">Start Game</button>`;
+  settingsDiv.innerHTML=html;
 
-    function showSettings(selectedMode) {
-      mode = selectedMode;
-      settingsDiv.innerHTML = '';
-      
-      let html = `
-        <label>Number of players: <input type="number" id="numPlayers" value="10" min="2"></label>
-        <label>Step size (k): <input type="number" id="stepSize" value="3" min="2"></label>
-        <label>Your seat: <input type="number" id="playerSeat" value="1" min="1"></label>
-        <label>Theme: 
-          <select id="theme">
-            <option value="classic">Classic</option>
-            <option value="space">Space</option>
-            <option value="zombie">Zombie</option>
-          </select>
-        </label>
-      `;
-      
-      if (mode === 'puzzle') {
-        html += `
-          <label>Guess safe spot: <input type="number" id="guessInput" min="1"></label>
-          <button id="submitGuessBtn">Submit Guess</button>
-        `;
-      }
-      
-      if (mode === 'endless') {
-        html += `<p style="font-size:14px; color:#666;">In Endless mode, you start with 10 players. After each round, 2 more players join. Survive as long as possible!</p>`;
-      }
-      
-      html += `<button id="startGameBtn">Start Game</button>`;
-      settingsDiv.innerHTML = html;
-      
-      document.getElementById('startGameBtn').addEventListener('click', startGame);
-      if (mode === 'puzzle') {
-        document.getElementById('submitGuessBtn').addEventListener('click', submitGuess);
-      }
+  // ✅ SAFARI/BRAVE FIX: re-bind event listeners *after* innerHTML
+  document.getElementById('startGameBtn').addEventListener('click', startGame);
+  if(selectedMode==='puzzle') document.getElementById('submitGuessBtn').addEventListener('click', submitGuess);
+}
+
+function startGame(){
+  n=parseInt(document.getElementById('numPlayers').value);
+  k=parseInt(document.getElementById('stepSize').value);
+  playerSeat=parseInt(document.getElementById('playerSeat').value);
+  avatar=document.getElementById('avatar').value||'🙂';
+  theme=document.getElementById('theme').value;
+  if(playerSeat<1||playerSeat>n){alert("Your seat must be 1-"+n); return;}
+  menu.style.display='none'; gameUI.style.display='flex';
+  endlessStreak=0; shieldUsed=false; shieldActive=false;
+  particles=[];
+  initGame();
+  nextStepBtn.style.display=(mode==='step')?'inline-block':'none';
+  if(mode==='endless') setupShield();
+}
+
+function setupShield(){
+  powerupsDiv.innerHTML='<span class="powerup" title="Click to survive one elimination">🛡️</span>';
+  const shieldIcon=powerupsDiv.querySelector('.powerup');
+  shieldIcon.onclick=()=>{
+    shieldUsed=true; shieldActive=true;
+    shieldIcon.style.opacity=0.5; shieldIcon.style.pointerEvents='none';
+    setTimeout(()=>shieldActive=false,1000);
+  };
+}
+
+function submitGuess(){ playerGuess=parseInt(document.getElementById('guessInput').value); runGame(); }
+
+function initGame(){
+  players=[]; eliminated=[]; index=0; step=0; resultDiv.textContent=''; particles=[];
+  for(let i=1;i<=n;i++){ let av=(i===playerSeat)?avatar:getRandomAvatar(); players.push({seat:i,avatar:av}); }
+  drawCircle();
+  if(mode==='classic'||mode==='endless') runGame();
+}
+
+function runGame(){ interval=setInterval(eliminationStep,700); }
+
+function eliminationStep(){
+  if(players.length===1){
+    if(interval) clearInterval(interval);
+    let winner=players[0], safeSpot=josephus(n,k), survived=(playerSeat===winner.seat);
+    if(mode==='puzzle'){
+      let result; if(playerGuess===null){result='No guess'; resultDiv.innerHTML="No guess! Safe:"+safeSpot;}
+      else if(playerGuess===safeSpot){result='Correct 🎉'; resultDiv.innerHTML="🎉 Correct! Safe:"+safeSpot;}
+      else{result='Wrong ❌'; resultDiv.innerHTML=`Wrong guess ${playerGuess}, safe:${safeSpot}`;}
+      scores.push({guess:playerGuess||'none', safeSpot:safeSpot, result:result});
+      localStorage.setItem('josephusScores',JSON.stringify(scores)); updateLeaderboard();
+    } else if(mode==='endless'){
+      if(survived || shieldUsed){ endlessStreak++; n++; shieldUsed=false; resultDiv.innerHTML=`🎉 Survived! Streak: ${endlessStreak}. Next round n=${n}`; setupShield(); setTimeout(initGame,1000); return; }
+      else{resultDiv.innerHTML=`💀 Eliminated! Final streak: ${endlessStreak}`;}
+    } else { resultDiv.innerHTML=`Winner seat ${winner.seat}. Safe: ${safeSpot}. You ${survived?'survived 🎉':'eliminated 💀'}`; }
+    return;
+  }
+
+  step++; if(step===k){ const el=players[index];
+    if(el.seat===playerSeat && shieldActive){ shieldActive=false; index++; step=0; drawCircle(); return; }
+    eliminated.push(players[index]); createParticles(index); players.splice(index,1); step=0;
+  } else index++;
+  if(index>=players.length) index=0;
+  drawCircle();
+}
+
+function createParticles(playerIndex){
+  const total=players.length+eliminated.length;
+  const angle=(2*Math.PI*playerIndex)/total-Math.PI/2;
+  const radius=200, cx=canvas.width/2, cy=canvas.height/2;
+  const x=cx+radius*Math.cos(angle), y=cy+radius*Math.sin(angle);
+  for(let i=0;i<15;i++){
+    const angleRand=Math.random()*2*Math.PI, speed=Math.random()*3+1;
+    particles.push({x:x, y:y, vx:Math.cos(angleRand)*speed, vy:Math.sin(angleRand)*speed, alpha:1});
+  }
+}
+
+function drawParticles(){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.alpha-=0.05;
+    if(p.alpha<=0) particles.splice(i,1);
+    else { ctx.fillStyle=`rgba(255,165,0,${p.alpha})`; ctx.beginPath(); ctx.arc(p.x,p.y,4,0,2*Math.PI); ctx.fill(); }
+  }
+}
+
+function drawCircle(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const radius=200, cx=canvas.width/2, cy=canvas.height/2;
+  const total=players.length+eliminated.length;
+  for(let i=0;i<total;i++){
+    const angle=(2*Math.PI*i)/total-Math.PI/2;
+    const x=cx+radius*Math.cos(angle), y=cy+radius*Math.sin(angle);
+    ctx.beginPath(); ctx.arc(x,y,22,0,2*Math.PI);
+    const seatNum=i+1;
+    const playerObj=players.find(p=>p.seat===seatNum);
+    const isElim=eliminated.find(p=>p.seat===seatNum);
+    if(isElim) ctx.fillStyle=(theme==='zombie')?'darkgreen':'red';
+    else if(playerObj) ctx.fillStyle=(playerObj.seat===playerSeat)?((theme==='space')?'lightyellow':'lightgreen'):((theme==='space')?'lightblue':'skyblue');
+    else ctx.fillStyle='gray';
+    ctx.fill(); ctx.stroke();
+    ctx.font='20px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    if(playerObj) ctx.fillText(playerObj.avatar,x,y);
+    else if(isElim) ctx.fillText((theme==='zombie')?'💀':'❌',x,y);
+    else ctx.fillText('?',x,y);
+    if(playerObj && playerObj.seat===playerSeat && shieldActive){
+      ctx.beginPath(); ctx.arc(x,y,30,0,2*Math.PI);
+      ctx.strokeStyle='gold'; ctx.lineWidth=4; ctx.stroke();
     }
+  }
+  drawParticles();
+  requestAnimationFrame(drawCircle);
+}
 
-    function startGame() {
-      n = parseInt(document.getElementById('numPlayers').value);
-      k = parseInt(document.getElementById('stepSize').value);
-      playerSeat = parseInt(document.getElementById('playerSeat').value);
-      theme = document.getElementById('theme').value;
-      
-      if (playerSeat < 1 || playerSeat > n) {
-        alert("Your seat must be between 1 and " + n);
-        return;
-      }
-      
-      menu.style.display = 'none';
-      gameUI.style.display = 'block';
-      shieldUsed = false;
-      shieldActive = false;
-      particles = [];
-      gameActive = true;
-      score = 0;
-      survivalRounds = 0;
-      
-      // Initialize powerups based on mode
-      powerupsAvailable = [];
-      if (mode !== 'puzzle') {
-        powerupsAvailable.push({type: 'shield', uses: 1, icon: '🛡️'});
-        if (mode === 'endless') {
-          powerupsAvailable.push({type: 'skip', uses: 3, icon: '⏭️'});
-        }
-      }
-      
-      updatePowerupsDisplay();
-      initGame();
-      nextStepBtn.style.display = (mode === 'step') ? 'inline-block' : 'none';
-    }
+function josephus(n,k){let res=0; for(let i=1;i<=n;i++) res=(res+k)%i; return res+1;}
 
-    function initGame() {
-      players = [];
-      eliminated = [];
-      index = 0;
-      step = 0;
-      
-      for (let i = 1; i <= n; i++) {
-        players.push({
-          seat: i,
-          alive: true
-        });
-      }
-      
-      drawCircle();
-      resultDiv.innerHTML = `Game started! ${players.length} players. Step size: ${k}`;
-      
-      if (mode === 'classic' || mode === 'endless') {
-        interval = setInterval(eliminationStep, 800);
-      }
-    }
+document.getElementById('classicBtn').onclick=()=>showSettings('classic');
+document.getElementById('stepBtn').onclick=()=>showSettings('step');
+document.getElementById('puzzleBtn').onclick=()=>showSettings('puzzle');
+document.getElementById('endlessBtn').onclick=()=>showSettings('endless');
+document.getElementById('leaderboardBtn').onclick=()=>document.getElementById('leaderboard').style.display='block';
+nextStepBtn.onclick=eliminationStep;
 
-    function eliminationStep() {
-      if (!gameActive || players.length <= 1) {
-        if (players.length <= 1) {
-          endGame();
-        }
-        return;
-      }
-      
-      step++;
-      if (step >= k) {
-        const el = players[index];
-        
-        // Check if player has shield active
-        if (el.seat === playerSeat && shieldActive) {
-          shieldActive = false;
-          resultDiv.innerHTML = "Shield protected you!";
-          index++;
-          step = 0;
-          drawCircle();
-          return;
-        }
-        
-        eliminated.push({...el, eliminatedAt: Date.now()});
-        
-        // Check if player was eliminated
-        if (el.seat === playerSeat) {
-          endGame(false);
-          return;
-        }
-        
-        players.splice(index, 1);
-        step = 0;
-        
-        // In endless mode, check if round is over
-        if (mode === 'endless' && players.length === 1) {
-          survivalRounds++;
-          resultDiv.innerHTML = `Round ${survivalRounds} complete! +2 players next round.`;
-          
-          // Add 2 more players for the next round
-          setTimeout(() => {
-            const newSeat = players.length + 1;
-            players.push({seat: newSeat, alive: true});
-            players.push({seat: newSeat + 1, alive: true});
-            n = players.length;
-            index = 0;
-            step = 0;
-            drawCircle();
-          }, 1500);
-        }
-      } else {
-        index++;
-      }
-      
-      if (index >= players.length) index = 0;
-      drawCircle();
-    }
-
-    function usePowerup(powerupType) {
-      if (!gameActive) return;
-      
-      const powerup = powerupsAvailable.find(p => p.type === powerupType);
-      if (!powerup || powerup.uses <= 0) return;
-      
-      switch(powerupType) {
-        case 'shield':
-          if (!shieldUsed) {
-            shieldActive = true;
-            shieldUsed = true;
-            powerup.uses--;
-            resultDiv.innerHTML = "Shield activated! You'll be protected once.";
-          }
-          break;
-          
-        case 'skip':
-          if (mode === 'endless' && players.length > 1) {
-            // Skip the current elimination
-            step = 0;
-            index = (index + 1) % players.length;
-            powerup.uses--;
-            resultDiv.innerHTML = "Skipped current elimination!";
-            drawCircle();
-          }
-          break;
-      }
-      
-      updatePowerupsDisplay();
-    }
-
-    function updatePowerupsDisplay() {
-      powerupsDiv.innerHTML = '';
-      powerupsAvailable.forEach(powerup => {
-        const powerupEl = document.createElement('span');
-        powerupEl.className = `powerup ${powerup.uses <= 0 ? 'used' : ''}`;
-        powerupEl.innerHTML = `${powerup.icon} (${powerup.uses})`;
-        powerupEl.title = powerup.type === 'shield' ? 'Protect yourself once' : 'Skip elimination';
-        powerupEl.addEventListener('click', () => usePowerup(powerup.type));
-        powerupsDiv.appendChild(powerupEl);
-      });
-    }
-
-    function submitGuess() {
-      if (!gameActive) return;
-      
-      const guessInput = document.getElementById('guessInput');
-      playerGuess = parseInt(guessInput.value);
-      
-      if (isNaN(playerGuess) || playerGuess < 1 || playerGuess > n) {
-        alert("Please enter a valid seat number between 1 and " + n);
-        return;
-      }
-      
-      resultDiv.innerHTML = `You guessed seat ${playerGuess}. Let's see if you're right!`;
-      guessInput.disabled = true;
-      document.getElementById('submitGuessBtn').disabled = true;
-      
-      // Start the elimination process
-      interval = setInterval(puzzleEliminationStep, 800);
-    }
-
-    function puzzleEliminationStep() {
-      if (players.length <= 1) {
-        clearInterval(interval);
-        endGame();
-        return;
-      }
-      
-      step++;
-      if (step >= k) {
-        const el = players[index];
-        eliminated.push({...el, eliminatedAt: Date.now()});
-        players.splice(index, 1);
-        step = 0;
-        
-        resultDiv.innerHTML = `Eliminated seat ${el.seat}. ${players.length} players left.`;
-      } else {
-        index++;
-      }
-      
-      if (index >= players.length) index = 0;
-      drawCircle();
-    }
-
-    function endGame(isWin = null) {
-      gameActive = false;
-      clearInterval(interval);
-      
-      // Determine if player won
-      let playerWon = false;
-      if (mode === 'puzzle') {
-        playerWon = players.length === 1 && players[0].seat === playerGuess;
-      } else {
-        playerWon = players.length === 1 && players[0].seat === playerSeat;
-      }
-      
-      if (isWin !== null) playerWon = isWin;
-      
-      let safeSpot = josephus(n, k);
-      
-      if (playerWon) {
-        resultDiv.innerHTML = `
-          You won! 🎉 ${mode === 'endless' ? `Survived ${survivalRounds} rounds!` : ''}<br>
-          Safe position (mathematical solution): <b>${safeSpot}</b>
-        `;
-        score = mode === 'endless' ? survivalRounds : n;
-        
-        // Add to leaderboard
-        addToLeaderboard(score);
-      } else {
-        resultDiv.innerHTML = `
-          Game over! ${players.length > 0 ? `Seat ${players[0].seat} won.` : 'No one survived.'}<br>
-          Safe position (mathematical solution): <b>${safeSpot}</b><br>
-          You ${players.length > 0 && players[0].seat === playerSeat ? "survived 🎉" : "were eliminated 💀"}
-        `;
-      }
-    }
-
-    function addToLeaderboard(score) {
-      const entry = {
-        score: score,
-        date: new Date().toLocaleDateString(),
-        mode: mode,
-        players: n,
-        step: k
-      };
-      
-      leaderboardData[mode].push(entry);
-      // Keep only top 10 scores
-      leaderboardData[mode].sort((a, b) => b.score - a.score);
-      leaderboardData[mode] = leaderboardData[mode].slice(0, 10);
-      
-      // Save to localStorage
-      localStorage.setItem('josephusLeaderboard', JSON.stringify(leaderboardData));
-    }
-
-    function showLeaderboard() {
-      scoreList.innerHTML = '';
-      
-      for (const modeKey in leaderboardData) {
-        const modeScores = leaderboardData[modeKey];
-        if (modeScores.length > 0) {
-          const modeHeader = document.createElement('li');
-          modeHeader.innerHTML = `<strong>${modeKey.toUpperCase()}</strong>`;
-          scoreList.appendChild(modeHeader);
-          
-          modeScores.forEach((entry, index) => {
-            const li = document.createElement('li');
-            li.innerHTML = `${index+1}. Score: ${entry.score} (${entry.date}) - ${entry.players} players, k=${entry.step}`;
-            scoreList.appendChild(li);
-          });
-          
-          // Add spacing between modes
-          scoreList.appendChild(document.createElement('br'));
-        }
-      }
-      
-      leaderboard.style.display = 'block';
-      overlay.style.display = 'block';
-    }
-
-    function closeLeaderboardModal() {
-      leaderboard.style.display = 'none';
-      overlay.style.display = 'none';
-    }
-
-    function drawCircle() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const radius = 200;
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-
-      let total = players.length + eliminated.length;
-
-      // Apply theme-based styling
-      let bgColor, playerColor, eliminatedColor, currentPlayerColor;
-      
-      switch(theme) {
-        case 'space':
-          bgColor = 'black';
-          playerColor = '#4a6fa5';
-          eliminatedColor = '#8b0000';
-          currentPlayerColor = shieldActive ? 'gold' : '#32cd32';
-          break;
-        case 'zombie':
-          bgColor = '#2d5016';
-          playerColor = '#5a7d3e';
-          eliminatedColor = '#8b4513';
-          currentPlayerColor = shieldActive ? 'gold' : '#7cfc00';
-          break;
-        default: // classic
-          bgColor = 'white';
-          playerColor = 'lightblue';
-          eliminatedColor = 'lightcoral';
-          currentPlayerColor = shieldActive ? 'gold' : 'lightgreen';
-      }
-      
-      // Draw background based on theme
-      ctx.fillStyle = bgColor;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      for (let i = 0; i < total; i++) {
-        const angle = (2 * Math.PI * i) / total - Math.PI / 2;
-        const x = cx + radius * Math.cos(angle);
-        const y = cy + radius * Math.sin(angle);
-
-        ctx.beginPath();
-        ctx.arc(x, y, 20, 0, 2 * Math.PI);
-
-        const playerObj = players.find(p => p.seat === i + 1);
-        const eliminatedObj = eliminated.find(p => p.seat === i + 1);
-
-        if (playerObj) {
-          // Player is still in the game
-          ctx.fillStyle = (i + 1 === playerSeat) ? currentPlayerColor : playerColor;
-        } else if (eliminatedObj) {
-          // Player has been eliminated
-          ctx.fillStyle = eliminatedColor;
-        }
-
-        ctx.fill();
-        ctx.strokeStyle = 'black';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        ctx.fillStyle = 'black';
-        ctx.font = '14px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(i + 1, x, y);
-      }
-      
-      // Draw game info
-      ctx.fillStyle = 'white';
-      ctx.font = '14px Arial';
-      ctx.textAlign = 'left';
-      ctx.fillText(`Players: ${players.length}/${n}`, 10, 30);
-      ctx.fillText(`Step: ${step+1}/${k}`, 10, 50);
-      
-      if (mode === 'endless') {
-        ctx.fillText(`Round: ${survivalRounds}`, 10, 70);
-      }
-    }
-
-    // Josephus problem solution (recursive formula)
-    function josephus(n, k) {
-      let res = 0;
-      for (let i = 1; i <= n; i++) {
-        res = (res + k) % i;
-      }
-      return res + 1;
-    }
-
-    function restartGame() {
-      if (gameActive) {
-        clearInterval(interval);
-      }
-      startGame();
-    }
-
-    function backToMenu() {
-      if (gameActive) {
-        clearInterval(interval);
-        gameActive = false;
-      }
-      gameUI.style.display = 'none';
-      menu.style.display = 'block';
-    }
-  </script>
+// start render loop
+drawCircle();
+</script>
 </body>
 </html>
