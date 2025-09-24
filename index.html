@@ -4,70 +4,104 @@
   <meta charset="UTF-8">
   <title>Josephus Problem Game</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Press Start 2P', cursive;
       text-align: center;
-      background: #f8f9fa;
-      color: #333;
+      margin: 0;
+      padding: 0;
+      position: relative;
+      overflow: hidden;
     }
-
-    h1 {
-      margin-top: 20px;
-    }
-
+    h1 { margin-top: 20px; }
     #controls {
-      margin: 20px;
+      margin: 20px auto;
+      padding: 15px;
+      border: 4px solid #222;
+      display: inline-block;
+      position: relative;
+      z-index: 2;
     }
-
-    canvas {
-      border: 1px solid #ccc;
-      margin-top: 20px;
-      background: white;
+    label { display: block; margin: 10px; font-size: 12px; }
+    input, select, button {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 12px;
+      padding: 8px;
+      margin-top: 6px;
+      border: 3px solid #222;
+      outline: none;
     }
-
-    #result {
-      margin-top: 20px;
-      font-weight: bold;
-      font-size: 18px;
-    }
-
-    #nextStepBtn {
-      display: none;
-      margin-left: 10px;
-    }
-
+    button { cursor: pointer; }
+    #nextStepBtn { display: none; margin-top: 10px; }
     #puzzleControls {
       display: none;
       margin-top: 10px;
+      padding: 10px;
+      border: 4px solid #222;
+      width: fit-content;
+      margin-left: auto;
+      margin-right: auto;
+      position: relative;
+      z-index: 2;
     }
-
+    canvas {
+      border: 8px solid #222;
+      margin-top: 20px;
+      image-rendering: pixelated;
+      position: relative;
+      z-index: 1;
+    }
+    #result { margin-top: 20px; font-weight: bold; font-size: 14px; }
     #leaderboard {
-      margin-top: 12px;
-      font-size: 14px;
+      margin-top: 20px;
+      border: 4px solid #222;
+      padding: 10px;
+      display: inline-block;
+      text-align: left;
+      position: relative;
+      z-index: 2;
     }
-
-    #clearScores {
-      margin-left: 8px;
-      font-size: 12px;
+    #leaderboard ul { margin-top: 10px; padding-left: 20px; font-size: 12px; }
+    #clearScores { margin-left: 8px; font-size: 10px; padding: 4px 6px; }
+    /* THEME STYLES */
+    body.minecraft { background: #8db360; color: #fff; }
+    body.minecraft #controls, body.minecraft #puzzleControls, body.minecraft #leaderboard { background: #5a3921; color: #fff; }
+    body.minecraft h1 { color: #222; text-shadow: 2px 2px #eee; }
+    body.arcade { background: #000; color: #0ff; }
+    body.arcade #controls, body.arcade #puzzleControls, body.arcade #leaderboard { background: #111; color: #0ff; border-color: #0ff; }
+    body.arcade h1 { color: #ff0; text-shadow: 2px 2px #f0f; }
+    body.minimal { background: #f8f9fa; color: #222; font-family: Arial, sans-serif; }
+    body.minimal #controls, body.minimal #puzzleControls, body.minimal #leaderboard { background: #fff; color: #222; border-color: #444; }
+    body.minimal h1 { color: #000; text-shadow: none; }
+    /* CRT SCANLINES */
+    #scanlines {
+      pointer-events: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.15) 0px,
+        rgba(0,0,0,0.15) 2px,
+        transparent 2px,
+        transparent 4px
+      );
+      z-index: 5;
     }
   </style>
 </head>
-<body>
-  <h1>Josephus Problem Game 🎮</h1>
+<body class="minecraft">
+  <h1>JOSEPHUS RETRO</h1>
 
   <div id="controls">
     <label>Number of players (n):
       <input type="number" id="numPlayers" value="10" min="2">
     </label>
-
     <label>Step size (k):
       <input type="number" id="stepSize" value="3" min="2">
     </label>
-
     <label>Your seat:
       <input type="number" id="playerSeat" value="1" min="1">
     </label>
-
     <label>Mode:
       <select id="modeSelect">
         <option value="classic">Classic (auto)</option>
@@ -75,16 +109,22 @@
         <option value="puzzle">Puzzle (guess safe spot)</option>
       </select>
     </label>
-
-    <button id="startBtn">Start Game</button>
-    <button id="nextStepBtn">Next Step</button>
+    <label>Theme:
+      <select id="themeSelect">
+        <option value="minecraft">Minecraft</option>
+        <option value="arcade">Arcade</option>
+        <option value="minimal">Minimal</option>
+      </select>
+    </label>
+    <button id="startBtn">START GAME</button>
+    <button id="nextStepBtn">NEXT STEP</button>
   </div>
 
   <div id="puzzleControls">
     <label>Guess safe spot:
       <input type="number" id="guessInput" min="1">
     </label>
-    <button id="submitGuessBtn">Submit Guess</button>
+    <button id="submitGuessBtn">SUBMIT GUESS</button>
   </div>
 
   <canvas id="gameCanvas" width="600" height="600"></canvas>
@@ -92,15 +132,15 @@
   <div id="result"></div>
 
   <div id="leaderboard">
-    <div><b>Puzzle Leaderboard (local)</b>
+    <div><b>Puzzle Leaderboard</b>
       <button id="clearScores">Clear</button>
     </div>
     <ul id="scoreList"></ul>
   </div>
 
-  <script>
-    // KEEPING ORIGINAL VARIABLE NAMES & STRUCTURE AS CLOSE AS POSSIBLE
+  <div id="scanlines"></div>
 
+  <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
@@ -108,244 +148,158 @@
     const resultDiv = document.getElementById("result");
     const nextStepBtn = document.getElementById("nextStepBtn");
     const modeSelect = document.getElementById("modeSelect");
+    const themeSelect = document.getElementById("themeSelect");
     const puzzleControls = document.getElementById("puzzleControls");
     const guessInput = document.getElementById("guessInput");
     const submitGuessBtn = document.getElementById("submitGuessBtn");
     const scoreList = document.getElementById("scoreList");
     const clearScoresBtn = document.getElementById("clearScores");
 
-    // game state arrays
     let players = [];
     let eliminated = [];
+    let avatars = [];
     let n, k, playerSeat;
-
-    // internal control variables (kept explicit for step control)
     let currentIndex = 0;
     let currentStep = 0;
     let gameInterval = null;
-
-    // puzzle-mode guess
     let playerGuess = null;
-
-    // leaderboard stored in localStorage for puzzle mode
     let puzzleScores = JSON.parse(localStorage.getItem("josephus_puzzle_scores") || "[]");
     updateLeaderboardUI();
 
-    // ---------- Event bindings (explicit, not compacted) ----------
+    const emojiSet = ["😀","😎","🤠","👾","🐱","🐶","🐵","🐸","🐼","🐧","🐤","🦊","🦄","🐲","🤡","👽"];
+    let flashElim = null;
+    let winnerShake = null;
+
+    themeSelect.addEventListener("change", () => {
+      document.body.className = themeSelect.value;
+    });
+
     startBtn.addEventListener("click", () => {
       n = parseInt(document.getElementById("numPlayers").value, 10);
       k = parseInt(document.getElementById("stepSize").value, 10);
       playerSeat = parseInt(document.getElementById("playerSeat").value, 10);
-
-      if (isNaN(n) || n < 2) {
-        alert("Number of players (n) must be at least 2.");
-        return;
-      }
-      if (isNaN(k) || k < 1) {
-        alert("Step size (k) must be at least 1.");
-        return;
-      }
-      if (playerSeat < 1 || playerSeat > n) {
-        alert("Your seat must be between 1 and " + n);
-        return;
-      }
-
+      if (isNaN(n) || n < 2) { alert("n >= 2"); return; }
+      if (isNaN(k) || k < 1) { alert("k >= 1"); return; }
+      if (playerSeat < 1 || playerSeat > n) { alert("seat 1-" + n); return; }
       const mode = modeSelect.value;
-      playerGuess = null; // reset previous guess
-
-      // mode UI toggles
-      if (mode === "step") {
-        nextStepBtn.style.display = "inline-block";
-        puzzleControls.style.display = "none";
-      } else if (mode === "puzzle") {
-        nextStepBtn.style.display = "none";
-        puzzleControls.style.display = "block";
-      } else {
-        nextStepBtn.style.display = "none";
-        puzzleControls.style.display = "none";
-      }
-
-      // initialize and run according to mode
+      playerGuess = null;
+      flashElim = null; winnerShake = null;
+      if (mode === "step") { nextStepBtn.style.display = "inline-block"; puzzleControls.style.display = "none"; }
+      else if (mode === "puzzle") { nextStepBtn.style.display = "none"; puzzleControls.style.display = "block"; }
+      else { nextStepBtn.style.display = "none"; puzzleControls.style.display = "none"; }
       initGame();
-
-      if (mode === "classic") {
-        // auto-run
-        if (gameInterval) clearInterval(gameInterval);
-        gameInterval = setInterval(() => {
-          eliminationStep();
-        }, 700);
-      } else if (mode === "step") {
-        // step-by-step: user will click Next Step
-        if (gameInterval) clearInterval(gameInterval);
-      } else if (mode === "puzzle") {
-        // puzzle: wait for guess submit, then auto-run
-        if (gameInterval) clearInterval(gameInterval);
-      }
+      if (mode === "classic") { if (gameInterval) clearInterval(gameInterval); gameInterval = setInterval(() => { eliminationStep(); }, 700); }
+      else if (mode === "step") { if (gameInterval) clearInterval(gameInterval); }
+      else if (mode === "puzzle") { if (gameInterval) clearInterval(gameInterval); }
     });
 
-    nextStepBtn.addEventListener("click", () => {
-      eliminationStep();
-    });
-
+    nextStepBtn.addEventListener("click", () => { eliminationStep(); });
     submitGuessBtn.addEventListener("click", () => {
-      // validate guess
       const g = parseInt(guessInput.value, 10);
-      if (isNaN(g) || g < 1 || g > n) {
-        alert("Enter a valid guess between 1 and " + n);
-        return;
-      }
+      if (isNaN(g) || g < 1 || g > n) { alert("Enter guess 1-" + n); return; }
       playerGuess = g;
-
-      // start auto-run for puzzle after guess
       if (gameInterval) clearInterval(gameInterval);
-      gameInterval = setInterval(() => {
-        eliminationStep();
-      }, 700);
-
+      gameInterval = setInterval(() => { eliminationStep(); }, 700);
       resultDiv.textContent = "Guess submitted — running simulation...";
     });
-
     clearScoresBtn.addEventListener("click", () => {
-      if (confirm("Clear puzzle leaderboard?")) {
-        puzzleScores = [];
-        localStorage.setItem("josephus_puzzle_scores", JSON.stringify(puzzleScores));
-        updateLeaderboardUI();
-      }
+      if (confirm("Clear puzzle leaderboard?")) { puzzleScores = []; localStorage.setItem("josephus_puzzle_scores", JSON.stringify(puzzleScores)); updateLeaderboardUI(); }
     });
 
-    // ---------- Core functions (preserved style/structure) ----------
-
     function initGame() {
-      players = [];
-      eliminated = [];
+      players = []; eliminated = []; avatars = [];
       resultDiv.textContent = "";
-
       for (let i = 1; i <= n; i++) {
         players.push(i);
+        avatars[i] = emojiSet[(i-1) % emojiSet.length];
       }
-
-      // reset step/index tracking for new game
-      currentIndex = 0;
-      currentStep = 0;
-
+      currentIndex = 0; currentStep = 0;
       drawCircle(players, eliminated);
     }
 
     function eliminationStep() {
-      // single-step elimination logic; can be called by interval or Next Step
       if (players.length === 1) {
-        if (gameInterval) {
-          clearInterval(gameInterval);
-          gameInterval = null;
-        }
-
+        if (gameInterval) { clearInterval(gameInterval); gameInterval = null; }
         let winner = players[0];
         let safeSpot = josephus(n, k);
         let survived = (playerSeat === winner);
-
-        // if puzzle mode compare guess and store
+        winnerShake = winner; // animate winner
         if (modeSelect.value === "puzzle") {
           let resultText = "";
-          if (playerGuess === null) {
-            resultText = "No guess made.";
-            resultDiv.innerHTML = `You didn't guess. Safe position was <b>${safeSpot}</b>.`;
-          } else if (playerGuess === safeSpot) {
-            resultText = "Correct";
-            resultDiv.innerHTML = `🎉 Correct! Safe position is <b>${safeSpot}</b>. You ${survived ? "survived 🎉" : "were eliminated 💀"}`;
-          } else {
-            resultText = "Wrong";
-            resultDiv.innerHTML = `❌ Wrong. You guessed <b>${playerGuess}</b>. Safe position is <b>${safeSpot}</b>. You ${survived ? "survived 🎉" : "were eliminated 💀"}`;
-          }
-
-          // store puzzle result (local leaderboard)
+          if (playerGuess === null) { resultText = "No guess"; resultDiv.innerHTML = `You didn't guess. Safe: <b>${safeSpot}</b>.`; }
+          else if (playerGuess === safeSpot) { resultText = "Correct"; resultDiv.innerHTML = `🎉 Correct! Safe: <b>${safeSpot}</b>. You ${survived ? "survived 🎉" : "died 💀"}`; }
+          else { resultText = "Wrong"; resultDiv.innerHTML = `❌ Wrong. Guess: <b>${playerGuess}</b>. Safe: <b>${safeSpot}</b>. You ${survived ? "survived 🎉" : "died 💀"}`; }
           puzzleScores.push({ guess: playerGuess === null ? "none" : playerGuess, safeSpot: safeSpot, result: resultText });
           localStorage.setItem("josephus_puzzle_scores", JSON.stringify(puzzleScores));
           updateLeaderboardUI();
-
-        } else if (modeSelect.value === "classic" || modeSelect.value === "step") {
-          // classic/step summary
-          resultDiv.innerHTML = `Winner is seat <b>${winner}</b><br>Safe position (mathematical solution): <b>${safeSpot}</b><br>You ${survived ? "survived 🎉" : "were eliminated 💀"}`;
         } else {
-          // fallback
-          resultDiv.innerHTML = `Winner is seat <b>${winner}</b><br>Safe position: <b>${safeSpot}</b>`;
+          resultDiv.innerHTML = `Winner: <b>${winner}</b><br>Safe spot: <b>${safeSpot}</b><br>You ${survived ? "survived 🎉" : "died 💀"}`;
         }
         return;
       }
-
-      // normal elimination progression
       currentStep++;
       if (currentStep === k) {
-        // eliminate currentIndex
+        flashElim = players[currentIndex];
         eliminated.push(players[currentIndex]);
         players.splice(currentIndex, 1);
         currentStep = 0;
-      } else {
-        currentIndex++;
-      }
-
+      } else { currentIndex++; }
       if (currentIndex >= players.length) currentIndex = 0;
-
       drawCircle(players, eliminated);
     }
 
     function drawCircle(players, eliminated) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const radius = 200;
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-
+      const radius = 200, cx = canvas.width/2, cy = canvas.height/2;
       let total = players.length + eliminated.length;
-
       for (let i = 0; i < total; i++) {
         const angle = (2 * Math.PI * i) / total - Math.PI / 2;
-        const x = cx + radius * Math.cos(angle);
-        const y = cy + radius * Math.sin(angle);
+        let x = cx + radius * Math.cos(angle);
+        let y = cy + radius * Math.sin(angle);
 
-        ctx.beginPath();
-        ctx.arc(x, y, 20, 0, 2 * Math.PI);
-
-        if (eliminated.includes(i + 1)) {
-          ctx.fillStyle = "red";
-        } else if (players.includes(i + 1)) {
-          ctx.fillStyle = (i + 1 === playerSeat) ? "lightgreen" : "lightblue";
-        } else {
-          ctx.fillStyle = "gray";
+        // Winner shake
+        if (winnerShake === i+1) {
+          x += (Math.random() - 0.5) * 10;
+          y += (Math.random() - 0.5) * 10;
         }
 
-        ctx.fill();
-        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, y, 24, 0, 2*Math.PI);
 
-        ctx.fillStyle = "black";
-        ctx.font = "14px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(i + 1, x, y);
+        if (eliminated.includes(i+1)) {
+          ctx.fillStyle = (flashElim === i+1) ? "#ff4444" : "#b22222";
+        } else if (players.includes(i+1)) {
+          if (i+1 === playerSeat) {
+            ctx.fillStyle = "#7cfc00";
+            ctx.shadowColor = "#fff"; ctx.shadowBlur = 20; // pulse glow
+          } else { ctx.fillStyle = "#1e90ff"; ctx.shadowBlur = 0; }
+        } else { ctx.fillStyle = "#666"; ctx.shadowBlur = 0; }
+        ctx.fill(); ctx.strokeStyle = "#222"; ctx.lineWidth = 3; ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = "#000"; ctx.font = "16px 'Press Start 2P'"; ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.fillText(avatars[i+1] || "?", x, y-2);
       }
+      if (flashElim) setTimeout(() => { flashElim = null; drawCircle(players, eliminated); }, 300);
+      requestAnimationFrame(() => drawCircle(players, eliminated));
     }
 
-    // Josephus problem solution (iterative formula; same as your original)
     function josephus(n, k) {
       let res = 0;
-      for (let i = 1; i <= n; i++) {
-        res = (res + k) % i;
-      }
+      for (let i = 1; i <= n; i++) { res = (res + k) % i; }
       return res + 1;
     }
 
-    // ---------- Leaderboard UI helper ----------
     function updateLeaderboardUI() {
       scoreList.innerHTML = "";
       for (let i = 0; i < puzzleScores.length; i++) {
         const e = puzzleScores[i];
         const li = document.createElement("li");
-        li.textContent = `Game ${i + 1}: ${e.result} (Safe: ${e.safeSpot}, Guess: ${e.guess})`;
+        li.textContent = `Game ${i+1}: ${e.result} (Safe: ${e.safeSpot}, Guess: ${e.guess})`;
         scoreList.appendChild(li);
       }
     }
-
-    // Keep draw at least once initially
     drawCircle(players, eliminated);
-
   </script>
 </body>
 </html>
