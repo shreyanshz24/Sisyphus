@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Josephus Game - Particles & Shield</title>
+<title>Josephus Game Fixed</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 body, html { margin:0; padding:0; width:100%; height:100%; font-family:'Press Start 2P', cursive; background: linear-gradient(#87CEEB, #87CEFA); overflow:hidden; }
@@ -45,45 +45,34 @@ canvas { border:2px solid #000; background:white; margin-top:20px; }
 <button onclick="document.getElementById('leaderboard').style.display='none'">Close</button>
 </div>
 
-<!-- Sounds -->
-<audio id="shieldSound"><source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEA..." type="audio/wav"></audio>
-<audio id="eliminateSound"><source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEA..." type="audio/wav"></audio>
-<audio id="winSound"><source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEA..." type="audio/wav"></audio>
-
 <script>
 const menu=document.getElementById('menu'), gameUI=document.getElementById('gameUI');
 const settingsDiv=document.getElementById('settings'), canvas=document.getElementById('gameCanvas');
 const ctx=canvas.getContext('2d'), nextStepBtn=document.getElementById('nextStepBtn');
 const powerupsDiv=document.getElementById('powerups'), resultDiv=document.getElementById('result');
 const scoreList=document.getElementById('scoreList');
-const shieldSound=document.getElementById('shieldSound');
-const eliminateSound=document.getElementById('eliminateSound');
-const winSound=document.getElementById('winSound');
 
 let mode, n, k, playerSeat, avatar, theme='classic';
-let players=[], eliminated=[], index=0, step=0, interval, playerGuess=null;
+let players=[], eliminated=[], index=0, step=0, interval=null, playerGuess=null;
 let shieldUsed=false, shieldActive=false, particles=[];
-let endlessStreak=0;
-const scores=JSON.parse(localStorage.getItem('josephusScores'))||[];
-const otherAvatars=["😎","🤖","🐱","🐶","👻","👽","🦄","🐵","🦊","🦖","🦋","🎃","💀","🐸","🦁"];
 
-function updateLeaderboard(){scoreList.innerHTML=''; scores.forEach((entry,i)=>{let li=document.createElement('li'); li.textContent=`Game ${i+1}: ${entry.result} (Safe:${entry.safeSpot}, Guess:${entry.guess})`; scoreList.appendChild(li);});}
-updateLeaderboard();
+const otherAvatars=["😎","🤖","🐱","🐶","👻","👽","🦄","🐵","🦊","🦖","🦋","🎃","💀","🐸","🦁"];
 
 function getRandomAvatar(){ return otherAvatars[Math.floor(Math.random()*otherAvatars.length)]; }
 
 function showSettings(selectedMode){
-  settingsDiv.innerHTML=''; mode=selectedMode;
+  mode = selectedMode;
+  settingsDiv.innerHTML='';
   let html=`<label>Number of players: <input type="number" id="numPlayers" value="10" min="2"></label>
   <label>Step size (k): <input type="number" id="stepSize" value="3" min="2"></label>
   <label>Your seat: <input type="number" id="playerSeat" value="1" min="1"></label>
   <label>Your avatar: <input type="text" id="avatar" value="🙂" maxlength="2"></label>
   <label>Theme: <select id="theme"><option value="classic">Classic</option><option value="space">Space 🚀</option><option value="zombie">Zombie 🧟</option></select></label>`;
-  if(selectedMode==='puzzle') html+=`<label>Guess safe spot: <input type="number" id="guessInput" min="1"></label><button id="submitGuessBtn">Submit Guess</button>`;
+  if(mode==='puzzle') html+=`<label>Guess safe spot: <input type="number" id="guessInput" min="1"></label><button id="submitGuessBtn">Submit Guess</button>`;
   html+=`<button id="startGameBtn">Start Game</button>`;
-  settingsDiv.innerHTML=html;
-  document.getElementById('startGameBtn').onclick=startGame;
-  if(selectedMode==='puzzle') document.getElementById('submitGuessBtn').onclick=submitGuess;
+  settingsDiv.innerHTML = html;
+  document.getElementById('startGameBtn').onclick = startGame;
+  if(mode==='puzzle') document.getElementById('submitGuessBtn').onclick = submitGuess;
 }
 
 function startGame(){
@@ -94,67 +83,37 @@ function startGame(){
   theme=document.getElementById('theme').value;
   if(playerSeat<1||playerSeat>n){alert("Your seat must be 1-"+n); return;}
   menu.style.display='none'; gameUI.style.display='flex';
-  endlessStreak=0; shieldUsed=false; shieldActive=false;
-  particles=[];
+  shieldUsed=false; shieldActive=false; particles=[];
   initGame();
-  nextStepBtn.style.display=(mode==='step')?'inline-block':'none';
-  if(mode==='endless') setupShield();
+  nextStepBtn.style.display = (mode==='step')?'inline-block':'none';
 }
-
-function setupShield(){
-  powerupsDiv.innerHTML='<span class="powerup" title="Click to survive one elimination">🛡️</span>';
-  const shieldIcon=powerupsDiv.querySelector('.powerup');
-  shieldIcon.onclick=()=>{
-    shieldUsed=true; shieldActive=true; shieldIcon.style.opacity=0.5; shieldIcon.style.pointerEvents='none';
-    shieldSound.play();
-    setTimeout(()=>shieldActive=false,1000);
-  };
-}
-
-function submitGuess(){ playerGuess=parseInt(document.getElementById('guessInput').value); runGame(); }
 
 function initGame(){
-  players=[]; eliminated=[]; index=0; step=0; resultDiv.textContent=''; particles=[];
-  for(let i=1;i<=n;i++){ let av=(i===playerSeat)?avatar:getRandomAvatar(); players.push({seat:i,avatar:av}); }
+  players=[]; eliminated=[]; index=0; step=0;
+  for(let i=1;i<=n;i++){ players.push({seat:i,avatar:(i===playerSeat)?avatar:getRandomAvatar()}); }
   drawCircle();
-  if(mode==='classic'||mode==='endless') runGame();
+  if(mode==='classic'||mode==='endless') interval=setInterval(eliminationStep,700);
 }
 
-function runGame(){ interval=setInterval(eliminationStep,700); }
-
 function eliminationStep(){
-  if(players.length===1){
-    if(interval) clearInterval(interval);
-    let winner=players[0], safeSpot=josephus(n,k), survived=(playerSeat===winner.seat);
-    if(mode==='puzzle'){
-      let result; if(playerGuess===null){result='No guess'; resultDiv.innerHTML="No guess! Safe:"+safeSpot;}
-      else if(playerGuess===safeSpot){result='Correct 🎉'; resultDiv.innerHTML="🎉 Correct! Safe:"+safeSpot;}
-      else{result='Wrong ❌'; resultDiv.innerHTML=`Wrong guess ${playerGuess}, safe:${safeSpot}`;}
-      scores.push({guess:playerGuess||'none', safeSpot:safeSpot, result:result});
-      localStorage.setItem('josephusScores',JSON.stringify(scores)); updateLeaderboard();
-    } else if(mode==='endless'){
-      if(survived || shieldUsed){ endlessStreak++; n++; shieldUsed=false; resultDiv.innerHTML=`🎉 Survived! Streak: ${endlessStreak}. Next round n=${n}`; setupShield(); setTimeout(initGame,1000); return; }
-      else{resultDiv.innerHTML=`💀 Eliminated! Final streak: ${endlessStreak}`; winSound.play();}
-    } else { resultDiv.innerHTML=`Winner seat ${winner.seat}. Safe: ${safeSpot}. You ${survived?'survived 🎉':'eliminated 💀'}`; }
-    return;
-  }
-
-  step++; if(step===k){ const el=players[index];
+  if(players.length<=1){ clearInterval(interval); return; }
+  step++; if(step>=k){
+    const el=players[index];
     if(el.seat===playerSeat && shieldActive){ shieldActive=false; index++; step=0; drawCircle(); return; }
-    eliminated.push(players[index]); createParticles(index); players.splice(index,1); step=0; eliminateSound.play();
+    eliminated.push(players[index]); particlesCreate(index); players.splice(index,1); step=0;
   } else index++;
   if(index>=players.length) index=0;
   drawCircle();
 }
 
-function createParticles(playerIndex){
+function particlesCreate(playerIndex){
   const total=players.length+eliminated.length;
   const angle=(2*Math.PI*playerIndex)/total-Math.PI/2;
   const radius=200, cx=canvas.width/2, cy=canvas.height/2;
   const x=cx+radius*Math.cos(angle), y=cy+radius*Math.sin(angle);
-  for(let i=0;i<15;i++){
-    const angleRand=Math.random()*2*Math.PI, speed=Math.random()*3+1;
-    particles.push({x:x, y:y, vx:Math.cos(angleRand)*speed, vy:Math.sin(angleRand)*speed, alpha:1});
+  for(let i=0;i<15;i++){ 
+    const a=Math.random()*2*Math.PI, s=Math.random()*3+1;
+    particles.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,alpha:1});
   }
 }
 
@@ -168,42 +127,30 @@ function drawParticles(){
 
 function drawCircle(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  const radius=200, cx=canvas.width/2, cy=canvas.height/2;
+  const radius=200,cx=canvas.width/2,cy=canvas.height/2;
   const total=players.length+eliminated.length;
   for(let i=0;i<total;i++){
     const angle=(2*Math.PI*i)/total-Math.PI/2;
-    const x=cx+radius*Math.cos(angle), y=cy+radius*Math.sin(angle);
+    const x=cx+radius*Math.cos(angle),y=cy+radius*Math.sin(angle);
     ctx.beginPath(); ctx.arc(x,y,22,0,2*Math.PI);
-    const seatNum=i+1;
-    const playerObj=players.find(p=>p.seat===seatNum);
-    const isElim=eliminated.find(p=>p.seat===seatNum);
-    if(isElim) ctx.fillStyle=(theme==='zombie')?'darkgreen':'red';
-    else if(playerObj) ctx.fillStyle=(playerObj.seat===playerSeat)?((theme==='space')?'lightyellow':'lightgreen'):((theme==='space')?'lightblue':'skyblue');
-    else ctx.fillStyle='gray';
+    const playerObj=players.find(p=>p.seat===i+1);
+    ctx.fillStyle=playerObj?((playerObj.seat===playerSeat)?'lightgreen':'skyblue'):'red';
     ctx.fill(); ctx.stroke();
-    ctx.font='20px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
     if(playerObj) ctx.fillText(playerObj.avatar,x,y);
-    else if(isElim) ctx.fillText((theme==='zombie')?'💀':'❌',x,y);
-    else ctx.fillText('?',x,y);
-    // Shield pulse
-    if(playerObj && playerObj.seat===playerSeat && shieldActive){
-      ctx.beginPath(); ctx.arc(x,y,30,0,2*Math.PI);
-      ctx.strokeStyle='gold'; ctx.lineWidth=4; ctx.stroke();
-    }
+    else ctx.fillText('💀',x,y);
   }
   drawParticles();
   requestAnimationFrame(drawCircle);
 }
 
-function josephus(n,k){let res=0; for(let i=1;i<=n;i++) res=(res+k)%i; return res+1;}
-
+// --- Button bindings ---
 document.getElementById('classicBtn').onclick=()=>showSettings('classic');
 document.getElementById('stepBtn').onclick=()=>showSettings('step');
 document.getElementById('puzzleBtn').onclick=()=>showSettings('puzzle');
 document.getElementById('endlessBtn').onclick=()=>showSettings('endless');
-document.getElementById('leaderboardBtn').onclick=()=>document.getElementById('leaderboard').style.display='block';
+document.getElementById('leaderboardBtn').onclick=()=>alert('Leaderboard placeholder');
 nextStepBtn.onclick=eliminationStep;
-drawCircle();
+
 </script>
 </body>
 </html>
