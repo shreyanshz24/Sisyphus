@@ -45,12 +45,15 @@
       z-index: 2;
     }
     canvas {
-      border: 8px solid #222;
-      margin-top: 20px;
-      image-rendering: pixelated;
-      position: relative;
-      z-index: 1;
-    }
+  border: 8px solid #222;
+  margin-top: 20px;
+  image-rendering: pixelated;
+  width: 90vw;   /* 90% of viewport width */
+  height: 90vh;  /* 90% of viewport height */
+  max-width: 600px;
+  max-height: 600px;
+}
+
     #result { margin-top: 20px; font-weight: bold; font-size: 14px; }
     #leaderboard {
       margin-top: 20px;
@@ -90,13 +93,13 @@
   </style>
 </head>
 <body class="minecraft">
-  <h1>JOSEPHUS RETRO</h1>
+  <h1>JOSEPHUS</h1>
 
   <div id="controls">
-    <label>Number of players (n):
+    <label>Number of players:
       <input type="number" id="numPlayers" value="10" min="2">
     </label>
-    <label>Step size (k):
+    <label>Step size:
       <input type="number" id="stepSize" value="3" min="2">
     </label>
     <label>Your seat:
@@ -121,14 +124,11 @@
   </div>
 
   <div id="puzzleControls">
-    <label>Guess safe spot:
+    <label>Guess safe spot lil nigga:
       <input type="number" id="guessInput" min="1">
     </label>
-    <button id="submitGuessBtn">SUBMIT GUESS</button>
+    <button id="submitGuessBtn">SUBMIT GUESS HOE</button>
   </div>
-
-  <canvas id="gameCanvas" width="600" height="600"></canvas>
-
   <div id="result"></div>
 
   <div id="leaderboard">
@@ -139,9 +139,15 @@
   </div>
 
   <div id="scanlines"></div>
-
+  <canvas id="gameCanvas"></canvas>
   <script>
     const canvas = document.getElementById("gameCanvas");
+        function resizeCanvas() {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas(); // initial call
     const ctx = canvas.getContext("2d");
 
     const startBtn = document.getElementById("startBtn");
